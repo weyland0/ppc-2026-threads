@@ -28,15 +28,17 @@ class BatkovFRunFuncTestsThreads : public ppc::util::BaseRunFuncTests<InType, Ou
 
     auto size = static_cast<size_t>(std::get<0>(params));
 
-    uint8_t base_intensity = 120;
-    uint8_t contrast_range = 40;
-    std::uniform_int_distribution<uint8_t> dis(-contrast_range / 2, contrast_range / 2);
+    int base_intensity = 120;
+    int contrast_range = 40;
+    std::uniform_int_distribution<> dis(-contrast_range / 2, contrast_range / 2);
 
     input_data_.resize(size * size);
     for (size_t row = 0; row < size; ++row) {
       for (size_t col = 0; col < size; ++col) {
-        uint8_t value = base_intensity + ((row + col) % contrast_range);
-        input_data_[(row * size) + col] = value;
+        int noise = dis(gen_);
+        int value = base_intensity + noise;
+        value = std::clamp(value, 80, 160);
+        input_data_[(row * size) + col] = static_cast<uint8_t>(value);
       }
     }
   }
