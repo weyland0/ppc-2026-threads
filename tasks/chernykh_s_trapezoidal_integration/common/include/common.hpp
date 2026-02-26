@@ -2,13 +2,27 @@
 
 #include <string>
 #include <tuple>
+#include <vector>
+#include <functional>
+#include <utility>
 
 #include "task/include/task.hpp"
 
 namespace chernykh_s_trapezoidal_integration {
 
-using InType = float;
-using OutType = int;
+struct IntegrationInType {
+    std::vector<std::pair<double,double>> limits;
+
+    std::vector<int> steps;
+
+    std::function<double(const std::vector<double>&)> func;
+
+    IntegrationInType(std::vector<std::pair<double,double>> l, std::vector<int> s, std::funcion<double(const std::vector<double>&)> f):
+    limits(std::move(l)), steps(std::move(s)), func(std::move(f)) {}
+};
+
+using InType = IntegrationInType;
+using OutType = double;
 using TestType = std::tuple<int, std::string>;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
