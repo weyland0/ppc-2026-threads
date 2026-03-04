@@ -27,6 +27,7 @@ class MorozovaSStrassenMultiplicationSEQ : public BaseTask {
 
   Matrix a_, b_, c_;
   int n_{0};
+  bool valid_data_{true};
 };
 
 }  // namespace morozova_s_strassen_multiplication

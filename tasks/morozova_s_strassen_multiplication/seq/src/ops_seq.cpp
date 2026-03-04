@@ -139,22 +139,25 @@ bool MorozovaSStrassenMultiplicationSEQ::ValidationImpl() {
 
 bool MorozovaSStrassenMultiplicationSEQ::PreProcessingImpl() {
   if (GetInput().empty()) {
-    n_ = 0;
+    valid_data_ = false;
     return true;
   }
 
   double size_val = GetInput()[0];
   if (size_val <= 0.0) {
-    n_ = 0;
+    valid_data_ = false;
     return true;
   }
 
-  n_ = static_cast<int>(size_val);
+  int n = static_cast<int>(size_val);
 
-  if (GetInput().size() != 1 + (2 * static_cast<size_t>(n_) * static_cast<size_t>(n_))) {
-    n_ = 0;
+  if (GetInput().size() != 1 + (2 * static_cast<size_t>(n) * static_cast<size_t>(n))) {
+    valid_data_ = false;
     return true;
   }
+
+  valid_data_ = true;
+  n_ = n;
 
   a_ = Matrix(n_);
   b_ = Matrix(n_);
@@ -176,8 +179,7 @@ bool MorozovaSStrassenMultiplicationSEQ::PreProcessingImpl() {
 }
 
 bool MorozovaSStrassenMultiplicationSEQ::RunImpl() {
-  if (n_ == 0) {
-    c_ = Matrix(0);
+  if (!valid_data_) {
     return true;
   }
 
@@ -195,6 +197,10 @@ bool MorozovaSStrassenMultiplicationSEQ::RunImpl() {
 bool MorozovaSStrassenMultiplicationSEQ::PostProcessingImpl() {
   OutType &output = GetOutput();
   output.clear();
+
+  if (!valid_data_) {
+    return true;
+  }
 
   output.push_back(static_cast<double>(n_));
 
