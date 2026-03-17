@@ -3,10 +3,12 @@
 #include <cmath>
 #include <functional>
 #include <numbers>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "chernykh_s_trapezoidal_integration/common/include/common.hpp"
+#include "chernykh_s_trapezoidal_integration/omp/include/ops_omp.hpp"
 #include "chernykh_s_trapezoidal_integration/seq/include/ops_seq.hpp"
 #include "util/include/perf_test_util.hpp"
 
@@ -43,8 +45,9 @@ TEST_P(ChernykhSRunPerfTestThreads, RunPerfModes) {
 
 namespace {
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, ChernykhSTrapezoidalIntegrationSEQ>(PPC_SETTINGS_example_threads);
+const auto kAllPerfTasks = std::tuple_cat(
+    ppc::util::MakeAllPerfTasks<InType, ChernykhSTrapezoidalIntegrationSEQ>(PPC_SETTINGS_example_threads),
+    ppc::util::MakeAllPerfTasks<InType, ChernykhSTrapezoidalIntegrationOMP>(PPC_SETTINGS_example_threads));
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

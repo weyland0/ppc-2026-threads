@@ -1,8 +1,11 @@
 #include "chernykh_s_trapezoidal_integration/omp/include/ops_omp.hpp"
 
+#include <omp.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -33,9 +36,12 @@ double ChernykhSTrapezoidalIntegrationOMP::CalculatePointAndWeight(const Integra
                                                                    std::vector<double> &point) {
   double weight = 1.0;
   for (std::size_t i = 0; i < input.limits.size(); ++i) {
-    const double h = (input.limits[i].second - input.limits[i].first) / static_cast<double>(input.steps[i]); // шаг сетки h по i-ому измерению
-    point[i] = input.limits[i].first + (static_cast<double>(counters[i]) * h); // координата текущей точки в i измерении
-    if (std::cmp_equal(counters[i], 0) || std::cmp_equal(counters[i], input.steps[i])) { // если это граничная точка, уменьшаем вес на половину
+    const double h = (input.limits[i].second - input.limits[i].first) /
+                     static_cast<double>(input.steps[i]);  // шаг сетки h по i-ому измерению
+    point[i] =
+        input.limits[i].first + (static_cast<double>(counters[i]) * h);  // координата текущей точки в i измерении
+    if (std::cmp_equal(counters[i], 0) ||
+        std::cmp_equal(counters[i], input.steps[i])) {  // если это граничная точка, уменьшаем вес на половину
       weight *= 0.5;
     }
   }
@@ -45,29 +51,32 @@ double ChernykhSTrapezoidalIntegrationOMP::CalculatePointAndWeight(const Integra
 bool ChernykhSTrapezoidalIntegrationOMP::RunImpl() {
   const auto &input = this->GetInput();
   const std::size_t dims = input.limits.size();
-  std::vector<std::size_t> counters(dims, 0); // индекксы текущей точки по осям i j k
-  std::vector<double> current_point(dims); // координаты текущей точки
+  int64_t total_points = 1;
+  for (int setka : input.steps) {
+    total_points *= (static_cast<int64_t>(setka) + 1);  // растет очень быстро
+  }
+
   double total_sum = 0.0;
-  bool done = false;
+#pragma omp parallel default(none) shared(input, dims, total_points, total_sum)
+  {
+    std::vector<std::size_t> local_counters(dims);  // создаем локальный вектор итераций
+    std::vector<double> local_point(dims);          // значения в точках
 
-  while (!done) {
-    double weight = CalculatePointAndWeight(input, counters, current_point); // вес и координата текущей точки
-    total_sum += input.func(current_point) * weight; // считаем значение функции в точки умноженную на вес и добавляем к общей сумме
-
-    for (std::size_t i = 0; i < dims; ++i) { // проходимся по всем измерениям
-      if (std::cmp_less(++counters[i], input.steps[i] + 1)) { // проверяем, кончились ли точки в текущем измерении
-        break;
+#pragma omp for schedule(static)
+    for (int64_t j = 0; j < total_points; j++) {
+      int64_t temp_j = j;
+      for (std::size_t i = 0; i < dims; i++) {
+        int64_t point_in_dims = static_cast<int64_t>(input.steps[i]) + 1;  // количество точек в текущем измерении
+        local_counters[i] = static_cast<std::size_t>(temp_j % point_in_dims);
+        temp_j /= point_in_dims;
       }
-      if (std::cmp_equal(i, dims - 1)) { // проверяем, кончились ли измерения
-        done = true;
-      } else {
-        counters[i] = 0; // если не кончились, начинаем с нулевой точки
-      }
+      double weight = CalculatePointAndWeight(input, local_counters, local_point);
+      total_sum += input.func(local_point) * weight;
     }
   }
 
   double h_prod = 1.0;
-  for (std::size_t i = 0; i < dims; ++i) { // произведение всех шагов h для каждого измерения
+  for (std::size_t i = 0; i < dims; ++i) {
     h_prod *= (input.limits[i].second - input.limits[i].first) / static_cast<double>(input.steps[i]);
   }
 
