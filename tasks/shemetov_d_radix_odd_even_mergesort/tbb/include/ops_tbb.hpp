@@ -11,7 +11,7 @@ namespace shemetov_d_radix_odd_even_mergesort {
 class ShemetovDRadixOddEvenMergeSortTBB : public BaseTask {
  public:
   static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
-    return ppc::task::TypeOfTask::kOMP;
+    return ppc::task::TypeOfTask::kTBB;
   }
   explicit ShemetovDRadixOddEvenMergeSortTBB(const InType &in);
 
