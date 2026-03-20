@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "leonova_a_radix_merge_sort/common/include/common.hpp"
+#include "leonova_a_radix_merge_sort/omp/include/ops_omp.hpp"
 #include "leonova_a_radix_merge_sort/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
@@ -342,6 +343,7 @@ const std::array<TestType, 24> kTestParam = {
 };
 
 const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<LeonovaARadixMergeSortOMP, InType>(kTestParam, PPC_SETTINGS_leonova_a_radix_merge_sort),
     ppc::util::AddFuncTask<LeonovaARadixMergeSortSEQ, InType>(kTestParam, PPC_SETTINGS_leonova_a_radix_merge_sort));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
