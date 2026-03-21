@@ -9,6 +9,7 @@
 #include <tuple>
 #include <vector>
 
+#include "kopilov_d_vertical_gauss_filter/common/include/common.hpp"
 #include "kopilov_d_vertical_gauss_filter/omp/include/ops_omp.hpp"
 #include "kopilov_d_vertical_gauss_filter/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
