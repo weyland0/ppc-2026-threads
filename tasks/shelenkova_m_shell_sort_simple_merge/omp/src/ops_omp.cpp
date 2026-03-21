@@ -92,7 +92,7 @@ bool ShelenkovaMShellSortSimpleMergeOMP::RunImpl() {
 
   SimpleMerge(left, right, data);
 
-  return std::is_sorted(data.begin(), data.end());
+  return std::ranges::is_sorted(data);
 }
 
 bool ShelenkovaMShellSortSimpleMergeOMP::PostProcessingImpl() {
