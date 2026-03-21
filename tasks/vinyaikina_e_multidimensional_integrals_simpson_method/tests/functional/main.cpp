@@ -54,7 +54,7 @@ TEST_P(VinyaikinaESimpsonFuncTests, Run) {
 double CountNDimArea(const std::vector<std::pair<double, double>> &borders) {
   double area = 1.0;
   for (const auto &border : borders) {
-    area *= (border[i].second - border[i].first);
+    area *= (border.second - border.first);
   }
   return area;
 }
