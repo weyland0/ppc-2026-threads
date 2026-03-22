@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "pikhotskiy_r_vertical_gauss_filter/common/include/common.hpp"
+#include "task/include/task.hpp"
 
 namespace pikhotskiy_r_vertical_gauss_filter {
 
