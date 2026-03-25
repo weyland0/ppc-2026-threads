@@ -138,7 +138,7 @@ bool VinyaikinaEMultidimIntegrSimpsonTBB::RunImpl() {
       local_res += OuntNtIntegral(left_border, right_border, simpson_factor, limits, actual_step, function);
     }
     return local_res;
-  }, std::plus<double>());
+  }, std::plus<>());
 
   return true;
 }
