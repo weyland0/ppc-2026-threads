@@ -1,5 +1,6 @@
 #include "timur_a_cannon/stl/include/ops_stl.hpp"
 
+#include <future>
 #include <cstddef>
 #include <thread>
 #include <utility>
