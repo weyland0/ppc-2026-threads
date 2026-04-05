@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "baranov_a_mult_matrix_fox_algorithm/common/include/common.hpp"
+#include "baranov_a_mult_matrix_fox_algorithm/seq/include/ops_seq.hpp"
 #include "baranov_a_mult_matrix_fox_algorithm/omp/include/ops_omp.hpp"
 #include "util/include/perf_test_util.hpp"
 
