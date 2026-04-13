@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 
 #include "afanasyev_a_integ_rect_method/common/include/common.hpp"
