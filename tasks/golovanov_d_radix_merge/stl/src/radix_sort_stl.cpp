@@ -10,6 +10,8 @@
 
 #include "util/include/util.hpp"
 
+namespace golovanov_d_radix_merge {
+
 namespace {
 constexpr int kBytes = 8;
 constexpr std::size_t kRadix = 256;
@@ -23,6 +25,91 @@ std::uint64_t ToSortable(std::uint64_t bits) {
 std::uint64_t FromSortable(std::uint64_t bits) {
   return ((bits & kSignMask) != 0U) ? (bits ^ kSignMask) : ~bits;
 }
+
+int GetThreadCount(std::size_t size) {
+  if (size == 0) {
+    return 1;
+  }
+
+  int num_threads = ppc::util::GetNumThreads();
+  if (num_threads <= 0) {
+    num_threads = 1;
+  }
+
+  if (static_cast<std::size_t>(num_threads) > size) {
+    num_threads = static_cast<int>(size);
+  }
+
+  return num_threads;
+}
+
+std::vector<std::pair<std::size_t, std::size_t>> BuildRanges(std::size_t size, int num_threads) {
+  if (num_threads <= 0) {
+    num_threads = 1;
+  }
+
+  const std::size_t threads_count = static_cast<std::size_t>(num_threads);
+  std::vector<std::pair<std::size_t, std::size_t>> ranges(threads_count);
+
+  const std::size_t base = size / threads_count;
+  const std::size_t rem = size % threads_count;
+
+  std::size_t begin = 0;
+  for (std::size_t i = 0; i < ranges.size(); ++i) {
+    const std::size_t block_size = base + ((i < rem) ? 1U : 0U);
+    ranges[i] = {begin, begin + block_size};
+    begin += block_size;
+  }
+
+  return ranges;
+}
+
+void SortParts(std::vector<double> &arr, const std::vector<std::pair<std::size_t, std::size_t>> &ranges) {
+  std::vector<std::thread> workers;
+  workers.reserve(ranges.size());
+
+  for (const auto &range : ranges) {
+    workers.emplace_back([&arr, range]() { RadixSortSTL::SortRange(arr, range.first, range.second); });
+  }
+
+  for (auto &worker : workers) {
+    worker.join();
+  }
+}
+
+std::vector<std::vector<double>> CopyParts(const std::vector<double> &arr,
+                                           const std::vector<std::pair<std::size_t, std::size_t>> &ranges) {
+  std::vector<std::vector<double>> parts(ranges.size());
+
+  for (std::size_t i = 0; i < ranges.size(); ++i) {
+    parts[i] = std::vector<double>(arr.begin() + static_cast<std::ptrdiff_t>(ranges[i].first),
+                                   arr.begin() + static_cast<std::ptrdiff_t>(ranges[i].second));
+  }
+
+  return parts;
+}
+
+std::vector<std::vector<double>> MergeStep(const std::vector<std::vector<double>> &parts) {
+  const std::size_t pair_count = parts.size() / 2;
+  std::vector<std::vector<double>> next((parts.size() + 1) / 2);
+  std::vector<std::thread> workers;
+  workers.reserve(pair_count);
+
+  for (std::size_t i = 0; i < pair_count; ++i) {
+    workers.emplace_back([&parts, &next, i]() { next[i] = RadixSortSTL::Merge(parts[2 * i], parts[(2 * i) + 1]); });
+  }
+
+  for (auto &worker : workers) {
+    worker.join();
+  }
+
+  if ((parts.size() % 2U) != 0U) {
+    next.back() = parts.back();
+  }
+
+  return next;
+}
+
 }  // namespace
 
 void RadixSortSTL::SortRange(std::vector<double> &arr, std::size_t left, std::size_t right) {
@@ -30,7 +117,7 @@ void RadixSortSTL::SortRange(std::vector<double> &arr, std::size_t left, std::si
     return;
   }
 
-  std::size_t n = right - left;
+  const std::size_t n = right - left;
   std::vector<std::uint64_t> data(n);
 
   for (std::size_t i = 0; i < n; ++i) {
@@ -45,27 +132,29 @@ void RadixSortSTL::SortRange(std::vector<double> &arr, std::size_t left, std::si
     std::array<std::size_t, kRadix> count{};
 
     for (std::size_t i = 0; i < n; ++i) {
-      auto b = static_cast<std::size_t>((data[i] >> (byte * 8)) & kByteMask);
-      ++count[b];
+      const std::size_t bucket = static_cast<std::size_t>((data[i] >> (byte * 8)) & kByteMask);
+      ++count.at(bucket);
     }
 
     std::size_t sum = 0;
     for (std::size_t i = 0; i < kRadix; ++i) {
-      std::size_t tmp = count[i];
-      count[i] = sum;
+      const std::size_t tmp = count.at(i);
+      count.at(i) = sum;
       sum += tmp;
     }
 
     for (std::size_t i = 0; i < n; ++i) {
-      auto b = static_cast<std::size_t>((data[i] >> (byte * 8)) & kByteMask);
-      buffer[count[b]++] = data[i];
+      const std::size_t bucket = static_cast<std::size_t>((data[i] >> (byte * 8)) & kByteMask);
+      const std::size_t pos = count.at(bucket);
+      buffer[pos] = data[i];
+      ++count.at(bucket);
     }
 
     data.swap(buffer);
   }
 
   for (std::size_t i = 0; i < n; ++i) {
-    std::uint64_t bits = FromSortable(data[i]);
+    const std::uint64_t bits = FromSortable(data[i]);
     std::memcpy(&arr[left + i], &bits, sizeof(double));
   }
 }
@@ -105,62 +194,17 @@ void RadixSortSTL::Sort(std::vector<double> &arr) {
     return;
   }
 
-  int num_threads = ppc::util::GetNumThreads();
-  if (num_threads <= 0) {
-    num_threads = 1;
-  }
+  const int num_threads = GetThreadCount(arr.size());
+  const auto ranges = BuildRanges(arr.size(), num_threads);
 
-  if (static_cast<std::size_t>(num_threads) > arr.size()) {
-    num_threads = static_cast<int>(arr.size());
-  }
+  SortParts(arr, ranges);
 
-  std::vector<std::pair<std::size_t, std::size_t>> ranges(num_threads);
-
-  std::size_t base = arr.size() / static_cast<std::size_t>(num_threads);
-  std::size_t rem = arr.size() % static_cast<std::size_t>(num_threads);
-
-  std::size_t begin = 0;
-  for (std::size_t i = 0; i < ranges.size(); ++i) {
-    std::size_t block_size = base + (i < rem ? 1 : 0);
-    ranges[i] = {begin, begin + block_size};
-    begin += block_size;
-  }
-
-  std::vector<std::thread> workers;
-  workers.reserve(ranges.size());
-  for (std::size_t i = 0; i < ranges.size(); ++i) {
-    workers.emplace_back([&arr, &ranges, i]() { RadixSortSTL::SortRange(arr, ranges[i].first, ranges[i].second); });
-  }
-  for (auto &thread : workers) {
-    thread.join();
-  }
-
-  std::vector<std::vector<double>> parts(num_threads);
-  for (int i = 0; i < num_threads; ++i) {
-    parts[i] = std::vector<double>(arr.begin() + static_cast<std::ptrdiff_t>(ranges[i].first),
-                                   arr.begin() + static_cast<std::ptrdiff_t>(ranges[i].second));
-  }
-
+  std::vector<std::vector<double>> parts = CopyParts(arr, ranges);
   while (parts.size() > 1) {
-    std::size_t pair_count = parts.size() / 2;
-    std::vector<std::vector<double>> next((parts.size() + 1) / 2);
-
-    std::vector<std::thread> merge_workers;
-    merge_workers.reserve(pair_count);
-    for (std::size_t i = 0; i < pair_count; ++i) {
-      merge_workers.emplace_back(
-          [&parts, &next, i]() { next[i] = RadixSortSTL::Merge(parts[2 * i], parts[(2 * i) + 1]); });
-    }
-    for (auto &thread : merge_workers) {
-      thread.join();
-    }
-
-    if (parts.size() % 2 != 0) {
-      next.back() = std::move(parts.back());
-    }
-
-    parts = std::move(next);
+    parts = MergeStep(parts);
   }
 
-  arr = std::move(parts[0]);
+  arr = std::move(parts.front());
 }
+
+}  // namespace golovanov_d_radix_merge
