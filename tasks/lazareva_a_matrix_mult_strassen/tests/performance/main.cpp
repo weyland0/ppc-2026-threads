@@ -78,4 +78,3 @@ INSTANTIATE_TEST_SUITE_P(RunModeTests, LazarevaARunPerfTestThreads, kGtestValues
 }  // namespace
 
 }  // namespace lazareva_a_matrix_mult_strassen
-это перф тесты, как из запустить если они написаны на технлогии tbb
