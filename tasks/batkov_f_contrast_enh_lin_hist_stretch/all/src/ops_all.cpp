@@ -222,8 +222,8 @@ bool BatkovFContrastEnhLinHistStretchALL::RunImpl() {
 
   auto [local_min, local_max] = FindLocalMinMax(local_input, kParallelMinMaxThreshold, num_threads);
 
-  uint8_t global_min = 0;
-  uint8_t global_max = 0;
+  unsigned char global_min = 0;
+  unsigned char global_max = 0;
   MPI_Allreduce(&local_min, &global_min, 1, MPI_UNSIGNED_CHAR, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&local_max, &global_max, 1, MPI_UNSIGNED_CHAR, MPI_MAX, MPI_COMM_WORLD);
 
