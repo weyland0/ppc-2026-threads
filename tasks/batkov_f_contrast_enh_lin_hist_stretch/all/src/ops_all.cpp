@@ -19,12 +19,8 @@ namespace batkov_f_contrast_enh_lin_hist_stretch {
 namespace {
 
 void BuildScatterLayout(size_t comm_size, size_t image_size, std::vector<int> &sendcounts, std::vector<int> &displs) {
-  if (sendcounts.size() != comm_size) {
-    sendcounts.resize(comm_size);
-  }
-  if (displs.size() != comm_size) {
-    displs.resize(comm_size);
-  }
+  sendcounts.resize(comm_size);
+  displs.resize(comm_size);
 
   size_t offset = 0;
   const size_t base = image_size / comm_size;
