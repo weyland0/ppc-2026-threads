@@ -5,8 +5,8 @@
 #include <cstdint>
 #include <tuple>
 
-#include "batkov_f_contrast_enh_lin_hist_stretch/common/include/common.hpp"
 #include "batkov_f_contrast_enh_lin_hist_stretch/all/include/ops_all.hpp"
+#include "batkov_f_contrast_enh_lin_hist_stretch/common/include/common.hpp"
 #include "batkov_f_contrast_enh_lin_hist_stretch/omp/include/ops_omp.hpp"
 #include "batkov_f_contrast_enh_lin_hist_stretch/seq/include/ops_seq.hpp"
 #include "batkov_f_contrast_enh_lin_hist_stretch/stl/include/ops_stl.hpp"
@@ -16,7 +16,7 @@
 namespace batkov_f_contrast_enh_lin_hist_stretch {
 
 class BatkovFRunPerfTestThreads : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  static constexpr size_t kImageSize = 15000;
+  static constexpr size_t kImageSize = 25000;
   InType input_data_;
 
   void SetUp() override {
